@@ -32,7 +32,7 @@ Ext.define('Emergalert.view.Main', {
                                 xtype: "label",
                                 hidden: true,
                                 centered: true,
-                                bottom: 180,
+                                bottom: 220,
                                 html: "Emergency Vehicle Nearby!",
                                 left: 385,
                                 style: "display:block; background-color: red; color: black; margin-left:auto; margin-right:auto"
@@ -60,6 +60,25 @@ Ext.define('Emergalert.view.Main', {
                                     {
                                         text: "Run Unit Test",
                                         action: "runUnitTest"
+                                    },
+                                    {
+                                        text: "Siren",
+                                        action: "siren"
+                                    },
+                                    {
+                                        id: "sirenAudio",
+                                        xtype: "audio",
+                                        url: "resources/sounds/siren.wav",
+                                        label: "Siren"
+                                    },
+                                    {
+                                        xtype: "spacer",
+                                        width: "10px"
+                                    },
+                                    {
+                                        xtype: "label",
+                                        id: "distanceLabel",
+                                        html: "Distance:"
                                     }
                                 ]
                             }
