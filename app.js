@@ -22,6 +22,7 @@ Ext.Loader.setConfig({
 enabled: true,
 disableCaching:false
 });
+//Ext.Ajax.disableCaching = false;
 //<debug>
 
 Ext.application({

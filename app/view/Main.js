@@ -74,7 +74,8 @@ Ext.define('Emergalert.view.Main', {
                                     },
                                     {
                                         text: "Warning",
-                                        action: "warning"
+                                        action: "warning",
+                                        hidden: true
                                     },
                                     {
                                         id: "sirenAudio",

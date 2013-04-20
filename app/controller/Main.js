@@ -423,7 +423,7 @@ Ext.define("Emergalert.controller.Main", {
     },
 
 
-    sendSms: function() { 
+    sendSmsStuart: function() { 
         console.log("sending sms") 
         Ext.Ajax.request(
             { url: 'http://64.34.218.51/sms.php', 
@@ -431,12 +431,13 @@ Ext.define("Emergalert.controller.Main", {
             success: function() {
                 console.log("Sent SMS message") }, 
             failure: function() {
-            console.log('failed to send SMS message') } }) },
+            console.log('failed to send SMS message') } }) 
+    },
 
-    sendSmsViaTwilio: function() {
+    sendSmsTwillio: function() {
         Ext.Ajax.request({
             url: 'https://api.twilio.com/2010-04-01/Accounts/AC6508b2e2326b479977ec9f921b3f17fd/SMS/Messages.json',
-            method: "GET",
+            method: "POST",
             parameters: {
                 From: "+14088682269",
                 To: "+14086230380",
