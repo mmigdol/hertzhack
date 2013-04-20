@@ -18,7 +18,11 @@ Ext.Loader.setPath({
     'Ext': 'touch/src',
     'Emergalert': 'app'
 });
-//</debug>
+Ext.Loader.setConfig({
+enabled: true,
+disableCaching:false
+});
+//<debug>
 
 Ext.application({
     name: 'Emergalert',
@@ -28,6 +32,10 @@ Ext.application({
     ],
 
     views: [
+        'Main'
+    ],
+
+    controllers: [
         'Main'
     ],
 

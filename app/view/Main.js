@@ -1,47 +1,45 @@
 Ext.define('Emergalert.view.Main', {
-    extend: 'Ext.tab.Panel',
+    extend: 'Ext.Panel',
     xtype: 'main',
-    requires: [
-        'Ext.TitleBar',
-        'Ext.Video'
-    ],
     config: {
-        tabBarPosition: 'bottom',
-
+        fullscreen: true,
+        layout: "hbox",
         items: [
             {
-                title: 'Welcome',
-                iconCls: 'home',
-
-                styleHtmlContent: true,
-                scrollable: true,
-
-                items: {
-                    docked: 'top',
-                    xtype: 'titlebar',
-                    title: 'Welcome to Sencha Touch 2'
-                },
-
-                html: [
-                    "You've just generated a new Sencha Touch 2 project. What you're looking at right now is the ",
-                    "contents of <a target='_blank' href=\"app/view/Main.js\">app/view/Main.js</a> - edit that file ",
-                    "and refresh to change what's rendered here."
-                ].join("")
+                xtype: 'map',
+                height: "100%",
+                width: "50%"
             },
             {
-                title: 'Get Started',
-                iconCls: 'action',
-
+                xtype: 'panel',
+                layout: 'vbox',
+                width: "50%",
                 items: [
                     {
-                        docked: 'top',
-                        xtype: 'titlebar',
-                        title: 'Getting Started'
+                        xtype: 'container',
+                        height: "50%",
+                        items: [
+                            {                                
+                                xtype: "image",
+                                height: "100%",
+                                width: "100%",
+                                src: "resources/images/Hertz-NeverLost.png"
+                            },
+                            {
+                                id: 'emergencyLabel',
+                                xtype: "label",
+                                centered: true,
+                                bottom: 180,
+                                html: "Emergency Vehicle Nearby!",
+                                left: 385,
+                                style: "display:block; background-color: red; color: black; margin-left:auto; margin-right:auto"
+                            }
+                        ]
                     },
                     {
-                        xtype: 'video',
-                        url: 'http://av.vimeo.com/64284/137/87347327.mp4?token=1330978144_f9b698fea38cd408d52a2393240c896c',
-                        posterUrl: 'http://b.vimeocdn.com/ts/261/062/261062119_640.jpg'
+                        xtype: 'panel',
+                        height: "50%",
+                        html: 'other controls go here'
                     }
                 ]
             }
