@@ -6,6 +6,7 @@ Ext.define("Emergalert.controller.Main", {
 
         refs: {
             emergencyLabel: "#emergencyLabel",
+            distanceLabel: "#distanceLabel",
             mapComp: "map"
         },
 
@@ -13,11 +14,17 @@ Ext.define("Emergalert.controller.Main", {
             'button[action=readCarData]' : {
                 tap: 'plotCarData'
             },
+            'button[action=simulateEmergencyData]' : {
+                tap: 'simulateEmergencyData'
+            },
             'button[action=readAmbulanceData]' : {
                 tap: 'plotEmergencyData'
             },
             'button[action=runUnitTest]' : {
                 tap: 'plotCarData'
+            },
+            'button[action=siren]' : {
+                tap: 'playSiren'
             },
             '#neverlostPanel' : {
                 tap: 'dismissAlert'
@@ -37,12 +44,20 @@ Ext.define("Emergalert.controller.Main", {
         this.getMapComp().on("maprender", function() {
             console.log("Map rendered - checking for collision");
             this.getMapComp().getMap().setZoom(15);
-            this.plotEmergencyData();
+            this.updateVehicle("C", 37.4845303, -122.2024975, 0, 0.6707759115381)
+            //this.plotEmergencyData();
         }, this)
     },
 
     runUnitTest: function() {
         this.testCheckForCollision();
+    },
+
+    playSiren: function() {
+        var me = this;
+        Ext.getCmp("sirenAudio").play();
+        this.showAlert();
+        setTimeout(function() { me.hideAlert(); }, 6000);
     },
 
     // which is unique identifier for the vehicle to update - "E" for emergency vehicle, "C" for car
@@ -64,6 +79,7 @@ Ext.define("Emergalert.controller.Main", {
             if (which == "C")
                 marker.setIcon("resources/icons/sportscar.png");
             else
+                //console.log("no setting icon")
                 marker.setIcon("resources/icons/hospital-building.png");
             o.marker = marker;
         }
@@ -78,12 +94,12 @@ Ext.define("Emergalert.controller.Main", {
     // move vehicle along its specified heading from specified point for specified distance
     moveVehicle: function(which, start, head, distance) {
         var me = this;
-        var deltaX = Math.cos(head) * distance / 3600;  // in KM
-        var deltaY = Math.sin(head) * distance / 3600;
+        var deltaX = Math.cos(head) * distance;  // in KM
+        var deltaY = Math.sin(head) * distance;
         // below constants from http://stackoverflow.com/questions/1253499/simple-calculations-for-working-with-lat-lon-km-distance
         var newLat = start.lat + deltaX / 110.54;
         var newLon = start.lon + deltaY / 111.320*Math.cos(start.lat);
-        me.updateVehicle(which, newLat, newLon, head, me.vehicles[which].speed) /* dont bother calculating speed at this point);*/
+        me.updateVehicle(which, newLat, newLon, head, 0) /* dont bother calculating speed at this point);*/
     },
 
     // let vehicle continue on its current trajectory for n seconds
@@ -117,8 +133,11 @@ Ext.define("Emergalert.controller.Main", {
         return d;
     },
 
+    // lat long are in deg
     convertToCartesian: function(lat, lon) {
         var R = 6371.0;
+        lat = lat * Math.PI / 180.0;
+        lon = lon * Math.PI / 180.0;
         return {
             x: R * Math.cos(lat) * Math.cos(lon),
             y: R * Math.cos(lat) * Math.sin(lon)
@@ -151,8 +170,9 @@ Ext.define("Emergalert.controller.Main", {
         var lon2 = me.vehicles.C.lon;
         var lon1 = me.vehicles.E.lon;
 
-        d = me.distanceBetweenTwoPoints(lat1, lon1, lat2, lon2)
-        me.inRange = (d < 1.6)
+        d = me.distanceBetweenTwoPoints(lat1, lon1, lat2, lon2) / 1.6
+        this.getDistanceLabel().setHtml("Distance: " + Number((d).toFixed(2)) + " mi");
+        me.inRange = (d < 0.35)
         if (me.inRange) // miles per KM
             me.showAlert();
         else
@@ -262,6 +282,13 @@ Ext.define("Emergalert.controller.Main", {
     },
 
     plotEmergencyData: function() {
+        console.log("plotCarData");
+        this.dismissed = false;
+        this.plotVehiclePositionFromJson("E", "ambulance-broadway.json", 1, 30)        
+    },
+
+    simulateEmergencyData: function() {
+        console.log("plotEmergencyData");
         var me = this;
         Ext.Ajax.request({
             url: "data/ambulance.json",
@@ -274,8 +301,8 @@ Ext.define("Emergalert.controller.Main", {
                         var data = JSON.parse(line);
                         var gps = data.gps_status
                         route.push({
-                            latitude: gps.latitude,
-                            longitude: gps.longitude
+                            lat: gps.latitude,
+                            lon: gps.longitude
                         })                        
                     }
                 }
@@ -292,7 +319,7 @@ Ext.define("Emergalert.controller.Main", {
         var driving = true;
         var totalTime = 0;
         var segmentTime = 0;
-        var msPerTick = 66;
+        var msPerTick = 10000; // 10 seconds
 
         // in KPH
         var currentSpeed = speed;
@@ -303,27 +330,32 @@ Ext.define("Emergalert.controller.Main", {
         var currentSegmentDistance = 0;
 
         // how long is first segment?
-        var segmentDistance = me.distanceBetweenTwoPoints( currentSegment.latitude, currentSegment.longitude, nextSegment.latitude, nextSegment.longitude);
-        var segmentHeading =  me.bearingBetweenTwoPoints( currentSegment.latitude, currentSegment.longitude, nextSegment.latitude, nextSegment.longitude);
+        var segmentDistance = me.distanceBetweenTwoPoints( currentSegment.lat, currentSegment.lon, nextSegment.lat, nextSegment.lon);
+        var segmentHeading =  me.bearingBetweenTwoPoints( currentSegment.lat, currentSegment.lon, nextSegment.lat, nextSegment.lon);
 
-        setInterval(function() {
-            if (routeIdx > route.length - 1)
+        console.log("Kicking off driver timer");
+        window.driveTimer = setInterval(function() {
+
+            if (routeIdx > route.length - 1) {
                 driving = false;
+                clearInterval(driveTimer)
+            };
             
             // how long are we going to go in this tick (in km)
-            var tickDistance = currentSpeed / 3600 * msPerTick / 1000;
-            if (currentSegmentDistance + tickDistance > segmentDistance) {
+            var tickDistance = currentSpeed / 3600.0 * msPerTick / 1000;
+            if (currentSegmentDistance + tickDistance >= segmentDistance) {
                 // move partway along the new segment
-                currentSegment = nextSegment
-                nextSegment = route[++routeIdx]
+                currentSegment = route[routeIdx+1]
+                nextSegment = route[routeIdx+2]
+                routeIdx++;
                 currentSegmentDistance = (currentSegmentDistance + tickDistance - segmentDistance);
-                segmentHeading =  me.bearingBetweenTwoPoints(currentSegment.latitude, currentSegment.longitude, nextSegment.latitude, nextSegment.longitude);
+                segmentHeading =  me.bearingBetweenTwoPoints(currentSegment.lat, currentSegment.lon, nextSegment.lat, nextSegment.lon);
             } else {
                 // move along the current segment
                 currentSegmentDistance += tickDistance
             }
 
-            me.moveVehicle(which, currentSegment, head, distance);
+            me.moveVehicle(which, currentSegment, segmentHeading, currentSegmentDistance);
 
         }, 1000)
 
