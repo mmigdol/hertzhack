@@ -19,7 +19,7 @@ Ext.define('Emergalert.view.Main', {
                     {
                         id: 'neverlostPanel',
                         xtype: 'container',
-                        height: "50%",
+                        height: "80%",
                         items: [
                             {                                
                                 xtype: "image",
@@ -32,10 +32,10 @@ Ext.define('Emergalert.view.Main', {
                                 xtype: "label",
                                 hidden: true,
                                 centered: true,
-                                bottom: 220,
+                                bottom: 360,
                                 html: "Emergency Vehicle Nearby!",
-                                left: 385,
-                                style: "display:block; background-color: red; color: black; margin-left:auto; margin-right:auto"
+                                left: 370,
+                                style: "display:block; background-color: red; color: black; margin-left:auto; margin-right:auto; font-size:1.3em; font-weight:bold"
                             }
                         ],
                         initialize: function() {
@@ -44,14 +44,20 @@ Ext.define('Emergalert.view.Main', {
                     },
                     {
                         xtype: 'panel',
-                        height: "50%",
+                        height: "20%",
+                        style: 'background-color: white',
                         items: [
                             {
                                 xtype: "toolbar",
+                                docked: 'bottom',
                                 items: [
                                     {
-                                        text: "Read Car Data",
+                                        text: "Read Car Data (file)",
                                         action: "readCarData"
+                                    },
+                                    {
+                                        text: "Read Car Data (real)",
+                                        action: "readCarDataReal"
                                     },
                                     {
                                         text: "Read Ambulance Data",
@@ -59,17 +65,28 @@ Ext.define('Emergalert.view.Main', {
                                     },
                                     {
                                         text: "Run Unit Test",
-                                        action: "runUnitTest"
+                                        action: "runUnitTest",
+                                        hidden: true
                                     },
                                     {
                                         text: "Siren",
                                         action: "siren"
                                     },
                                     {
+                                        text: "Warning",
+                                        action: "warning"
+                                    },
+                                    {
                                         id: "sirenAudio",
                                         xtype: "audio",
                                         url: "resources/sounds/siren.wav",
                                         label: "Siren"
+                                    },
+                                    {
+                                        id: "warningAudio",
+                                        xtype: "audio",
+                                        url: "resources/sounds/alarm_warning.wav",
+                                        hidden: true
                                     },
                                     {
                                         xtype: "spacer",

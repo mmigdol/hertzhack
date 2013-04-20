@@ -23,8 +23,14 @@ Ext.define("Emergalert.controller.Main", {
             'button[action=runUnitTest]' : {
                 tap: 'plotCarData'
             },
+            'button[action=readCarDataReal]' : {
+                tap: 'plotRealCarData'
+            },
             'button[action=siren]' : {
                 tap: 'playSiren'
+            },
+            'button[action=warning]' : {
+                tap: 'playWarning'
             },
             '#neverlostPanel' : {
                 tap: 'dismissAlert'
@@ -43,7 +49,7 @@ Ext.define("Emergalert.controller.Main", {
         console.log("Waiting for map to render");
         this.getMapComp().on("maprender", function() {
             console.log("Map rendered - checking for collision");
-            this.getMapComp().getMap().setZoom(15);
+            this.getMapComp().getMap().setZoom(16);
             this.updateVehicle("C", 37.4845303, -122.2024975, 0, 0.6707759115381)
             //this.plotEmergencyData();
         }, this)
@@ -58,6 +64,12 @@ Ext.define("Emergalert.controller.Main", {
         Ext.getCmp("sirenAudio").play();
         this.showAlert();
         setTimeout(function() { me.hideAlert(); }, 6000);
+    },
+
+    playWarning: function() {
+        if (!this.playedWarning)
+            Ext.getCmp("warningAudio").play();
+        this.playedWarning = true;
     },
 
     // which is unique identifier for the vehicle to update - "E" for emergency vehicle, "C" for car
@@ -172,7 +184,7 @@ Ext.define("Emergalert.controller.Main", {
 
         d = me.distanceBetweenTwoPoints(lat1, lon1, lat2, lon2) / 1.6
         this.getDistanceLabel().setHtml("Distance: " + Number((d).toFixed(2)) + " mi");
-        me.inRange = (d < 0.35)
+        me.inRange = (d < 0.28)
         if (me.inRange) // miles per KM
             me.showAlert();
         else
@@ -188,10 +200,12 @@ Ext.define("Emergalert.controller.Main", {
         if (now - me.lastAlertTime > me.MIN_ALERT_TIME_IN_S*1000) {
             me.getEmergencyLabel().setHidden(true);
             me.showingAlert = false;
+            me.drivingPaused = false;
         } else {
             me.nextHideTime = me.lastAlertTime + me.MIN_ALERT_TIME_IN_S*1000;
             me.hideTimer = setTimeout(function() {
                 me.showingAlert = false;
+                me.drivingPaused = false;
                 me.getEmergencyLabel().setHidden(true);
             })            
         }
@@ -203,6 +217,7 @@ Ext.define("Emergalert.controller.Main", {
         me.dismissed = true;
         me.getEmergencyLabel().setHidden(true);
         me.showingAlert = false;
+        me.drivingPaused = false;
     },
 
     showAlert: function() {
@@ -211,6 +226,12 @@ Ext.define("Emergalert.controller.Main", {
         // do not re-show alert once we dismissed
         if (me.dismissed)
             return;
+
+        if (!me.showingAlert) {
+            // me.sendSms();
+            me.playWarning();
+            me.drivingPaused = true;
+        }
 
         var now = +new Date;
         me.getEmergencyLabel().setHidden(false);        
@@ -255,6 +276,39 @@ Ext.define("Emergalert.controller.Main", {
         this.updateVehicle(which, gps.latitude, gps.longitude, gps.heading, gps.bearing);
     },
 
+    plotVehiclePositionFromWebSocket: function(which) {
+        console.log("Opening websocket");
+        var me = this;
+        var count = 0;
+        if (this.ws) {
+            console.log("webSocket already open!");
+            return;
+        }
+        ws = new WebSocket('ws://192.168.150.1/notif');
+        ws.onopen = function(e) {
+            console.log('Socket opened');
+        };
+        ws.onmessage = function(msg) {
+            var data = msg.data.split("\n")
+            for (var i = 0; i < data.length; i++) {
+                if (!(count++ % 10)) {
+                    try {
+                        me.plotOneLineOfData(which, data[i])
+                    } catch (e) {
+                        // ignore
+                    }
+
+                }
+            }
+        };
+        ws.onclose = function(e) {
+            appendTxtNode('Socket closed');
+        };
+        this.webSocket = ws;
+    },
+
+
+
     // reads JSON data from specified file.  Time per entry.  TimePerEntry * 
     plotVehiclePositionFromJson: function(which, filename, clockTimePerEntry, linesPerCall) {
         var points = []
@@ -265,6 +319,8 @@ Ext.define("Emergalert.controller.Main", {
                 var lines = resp.responseText.split("\n");
                 var i = 0;
                 var timer = setInterval(function() {
+                    if (which == "C" && me.drivingPaused)
+                        return;
                     me.plotOneLineOfData(which, lines[i])
                     i += linesPerCall
                     if (i >= lines.length)
@@ -278,13 +334,18 @@ Ext.define("Emergalert.controller.Main", {
     plotCarData: function() {
         console.log("plotCarData");
         this.dismissed = false;
-        this.plotVehiclePositionFromJson("C", "cardata.json", 1, 40)
+        this.plotVehiclePositionFromJson("C", "cardata.json", 1, 30)
+    },
+
+    plotRealCarData:function() {
+        this.dismissed = false;
+        this.plotVehiclePositionFromWebSocket("C");
     },
 
     plotEmergencyData: function() {
         console.log("plotCarData");
         this.dismissed = false;
-        this.plotVehiclePositionFromJson("E", "ambulance-broadway.json", 1, 30)        
+        this.plotVehiclePositionFromJson("E", "ambulance-broadway.json", 1, 35)        
     },
 
     simulateEmergencyData: function() {
@@ -362,17 +423,27 @@ Ext.define("Emergalert.controller.Main", {
     },
 
 
-    sendSms: function() {
+    sendSms: function() { 
+        console.log("sending sms") 
+        Ext.Ajax.request(
+            { url: 'http://64.34.218.51/sms.php', 
+            method: "GET", 
+            success: function() {
+                console.log("Sent SMS message") }, 
+            failure: function() {
+            console.log('failed to send SMS message') } }) },
+
+    sendSmsViaTwilio: function() {
         Ext.Ajax.request({
             url: 'https://api.twilio.com/2010-04-01/Accounts/AC6508b2e2326b479977ec9f921b3f17fd/SMS/Messages.json',
-            method: "POST",
+            method: "GET",
             parameters: {
                 From: "+14088682269",
                 To: "+14086230380",
                 Body: "Emergency Vehicle is Approaching"
             },
             headers: {
-                "Authorization" : "Basic: QUM2NTA4YjJlMjMyNmI0Nzk5NzdlYzlmOTIxYjNmMTdmZDpjODJhMzU5NTBmMDU3YmI4MTE3ZTIxOGVjM2E5YTVlZQ=="                
+                "Authorization" : "Basic: QUM2NTA4YjJlMjMyNmI0Nzk5NzdlYzlmOTIxYjNmMTdmZDo3OThmOTNlMGQ4ODNjNzJhZjhkMmE2OGY4YTM2OTAwMA=="                
             },
             success: function() {
                 console.log("Sent SMS message")
