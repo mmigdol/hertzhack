@@ -1,6 +1,7 @@
 Ext.define('Emergalert.view.Main', {
     extend: 'Ext.Panel',
     xtype: 'main',
+    requires: 'Ext.Ajax',
     config: {
         fullscreen: true,
         layout: "hbox",
@@ -16,6 +17,7 @@ Ext.define('Emergalert.view.Main', {
                 width: "50%",
                 items: [
                     {
+                        id: 'neverlostPanel',
                         xtype: 'container',
                         height: "50%",
                         items: [
@@ -28,18 +30,40 @@ Ext.define('Emergalert.view.Main', {
                             {
                                 id: 'emergencyLabel',
                                 xtype: "label",
+                                hidden: true,
                                 centered: true,
                                 bottom: 180,
                                 html: "Emergency Vehicle Nearby!",
                                 left: 385,
                                 style: "display:block; background-color: red; color: black; margin-left:auto; margin-right:auto"
                             }
-                        ]
+                        ],
+                        initialize: function() {
+                          this.relayEvents(this.element, ['tap']);
+                        }
                     },
                     {
                         xtype: 'panel',
                         height: "50%",
-                        html: 'other controls go here'
+                        items: [
+                            {
+                                xtype: "toolbar",
+                                items: [
+                                    {
+                                        text: "Read Car Data",
+                                        action: "readCarData"
+                                    },
+                                    {
+                                        text: "Read Ambulance Data",
+                                        action: "readAmbulanceData"
+                                    },
+                                    {
+                                        text: "Run Unit Test",
+                                        action: "runUnitTest"
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
