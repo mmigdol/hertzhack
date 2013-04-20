@@ -423,7 +423,7 @@ Ext.define("Emergalert.controller.Main", {
     },
 
 
-    sendSmsStuart: function() { 
+    sendSms: function() { 
         console.log("sending sms") 
         Ext.Ajax.request(
             { url: 'http://64.34.218.51/sms.php', 
